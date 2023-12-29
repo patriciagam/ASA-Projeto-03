@@ -6,7 +6,7 @@ p = int(p) # number of special packages
 max = int(max) # max production capacity
 
 # variable to store the problem data
-prob = LpProblem("UbiquityInc Daily Profit", LpMaximize)
+prob = LpProblem("UbiquityInc_Daily_Profit", LpMaximize)
 total_toys = 0
 goal = 0
 toys = [0]
@@ -18,7 +18,7 @@ for i in range(1, t + 1):
     toy_var = LpVariable("Toy" + str(i), 0, c, LpInteger)  # toy variables
     package_var = LpVariable("Package" + str(i), 0, c, LpInteger) # package variables
     toys.append({"l": l, "c": c, "toy_var": toy_var, "package_var": package_var, "in_package": False})
-    prob += package_var <= toy_var, "Package Constraint" + str(i) # package constraint
+    prob += package_var <= toy_var, "PackageConstraint" + str(i) # package constraint
     goal += (toy_var - package_var) * l
     total_toys += toy_var - package_var
 
@@ -38,7 +38,7 @@ for m in range(1, p + 1):
 
 prob += total_toys <= max, "Production Capacity"  # production capacity constraint
 prob += goal, "Maximize Profit" 
-prob.solve()
+prob.solve(GLPK(msg=0))
 
 max_profit = value(prob.objective)
 print(int(max_profit))
