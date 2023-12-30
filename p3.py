@@ -17,7 +17,7 @@ for i in range(1, t + 1):
     c = int(c) # production capacity per toy
     toy_var = LpVariable("Toy" + str(i), 0, c, LpInteger)  # toy variables
     package_var = LpVariable("Package" + str(i), 0, c, LpInteger) # package variables
-    toys.append({"l": l, "c": c, "toy_var": toy_var, "package_var": package_var, "in_package": False})
+    toys.append({"l": l, "c": c, "toy_var": toy_var, "package_var": package_var})
     prob += package_var <= toy_var, "PackageConstraint" + str(i) # package constraint
     goal += (toy_var - package_var) * l
     total_toys += toy_var - package_var
@@ -33,6 +33,9 @@ for m in range(1, p + 1):
     prob += min_package_var <= toys[i]["package_var"], f"MinPackageConstraint{i}_{m}"
     prob += min_package_var <= toys[j]["package_var"], f"MinPackageConstraint{j}_{m}"
     prob += min_package_var <= toys[k]["package_var"], f"MinPackageConstraint{k}_{m}"
+    toys[i]["package_var"] -= min_package_var
+    toys[j]["package_var"] -= min_package_var
+    toys[k]["package_var"] -= min_package_var
     goal += min_package_var * l
     total_toys += min_package_var * 3
 
