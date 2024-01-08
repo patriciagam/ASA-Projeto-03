@@ -22,8 +22,8 @@ def define_decision_variables(toys, packages):
     toy_vars = {i: LpVariable(f"toy{i}", 0, toy[1], LpInteger) for i, toy in toys.items()}
     
     package_vars = {
-        i: LpVariable(f"pack{i}", 0, min(toys[pack[0]][1] for pack in packages[i-1:i]), LpInteger)
-        for i in range(1, len(packages) + 1)
+        j: LpVariable(f"pack{j}", 0, min(toys[pack[0]][1] for pack in packages[j-1:j]), LpInteger)
+        for j in range(1, len(packages) + 1)
     }
 
     return toy_vars, package_vars
