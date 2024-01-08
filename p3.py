@@ -1,47 +1,61 @@
 from pulp import *
 
-t, p, max = input().split()
-t = int(t) # number of toys
-p = int(p) # number of special packages
-max = int(max) # max production capacity
+def read_toys(t):
+    return {i: list(map(int, input().split())) for i in range(1, t + 1)}
 
-# variable to store the problem data
-prob = LpProblem("UbiquityInc_Daily_Profit", LpMaximize)
-total_toys = 0
-goal = 0
-toys = [0]
+def read_packages(p):
+    return {i: list(map(int, input().split())) for i in range(1, p + 1)}
 
-for i in range(1, t + 1):
-    l, c = input().split()
-    l = int(l) # profit per toy
-    c = int(c) # production capacity per toy
-    toy_var = LpVariable("Toy" + str(i), 0, c, LpInteger)  # toy variables
-    package_var = LpVariable("Package" + str(i), 0, c, LpInteger) # package variables
-    toys.append({"l": l, "c": c, "toy_var": toy_var, "package_var": package_var})
-    prob += package_var <= toy_var, "PackageConstraint" + str(i) # package constraint
-    goal += (toy_var - package_var) * l
-    total_toys += toy_var - package_var
+def create_auxiliary_structures(package_dict, t, p):
+    aux = {i: [] for i in range(1, t + 1)}
+    packages = []
 
-for m in range(1, p + 1):
-    i, j, k, l = input().split()
-    i = int(i) # toy 1
-    j = int(j) # toy 2
-    k = int(k) # toy 3
-    l = int(l) # profit per special package
-    # pick the minimum production capacity of the 3 toys
-    min_package_var = LpVariable("MinPackage" + str(m), 0, None, LpInteger) 
-    prob += min_package_var <= toys[i]["package_var"], f"MinPackageConstraint{i}_{m}"
-    prob += min_package_var <= toys[j]["package_var"], f"MinPackageConstraint{j}_{m}"
-    prob += min_package_var <= toys[k]["package_var"], f"MinPackageConstraint{k}_{m}"
-    toys[i]["package_var"] -= min_package_var
-    toys[j]["package_var"] -= min_package_var
-    toys[k]["package_var"] -= min_package_var
-    goal += min_package_var * l
-    total_toys += min_package_var * 3
+    for i in range(1, p + 1):
+        l = package_dict[i]
+        for toy_id in l[:3]:
+            aux[toy_id].append(i)
+        packages.append(l)
 
-prob += total_toys <= max, "Production Capacity"  # production capacity constraint
-prob += goal, "Maximize Profit" 
-prob.solve(GLPK(msg=0))
+    return aux, packages
 
-max_profit = value(prob.objective)
-print(int(max_profit))
+def define_decision_variables(toys, packages):
+    toy_vars = {i: LpVariable(f"toy{i}", 0, toy[1], LpInteger) for i, toy in toys.items()}
+    
+    package_vars = {
+        i: LpVariable(f"pack{i}", 0, min(toys[pack[0]][1] for pack in packages[i-1:i]), LpInteger)
+        for i in range(1, len(packages) + 1)
+    }
+
+    return toy_vars, package_vars
+
+def set_objective_function(prob, toys, packages, toy_vars, package_vars):
+    prob += lpSum([toys[i][0] * toy_vars[i] for i in range(1, len(toys) + 1)]) + \
+            lpSum([packages[i-1][3] * package_vars[i] for i in range(1, len(packages) + 1)])
+
+def set_constraints(prob, toys, aux, toy_vars, package_vars):
+    for i in range(1, len(toys) + 1):
+        prob += lpSum([package_vars[j] for j in aux[i]]) + toy_vars[i] <= toys[i][1]
+
+
+def set_goal_constraint(prob, toy_vars, package_vars, max_capacity):
+    goal = lpSum(list(toy_vars.values())) + lpSum(3 * list(package_vars.values())) <= max_capacity
+    prob += goal
+
+def solve_optimization_problem():
+    # number of toys, number of special packages, maximum production capacity
+    t, p, max_capacity = map(int, input().split())
+    toys = read_toys(t)
+    package_dict = read_packages(p)
+    aux, packages = create_auxiliary_structures(package_dict, t, p)
+
+    prob = LpProblem("UbiquityInc_Daily_Profit", LpMaximize)
+
+    toy_vars, package_vars = define_decision_variables(toys, packages)
+    set_objective_function(prob, toys, packages, toy_vars, package_vars)
+    set_constraints(prob, toys, aux, toy_vars, package_vars)
+    set_goal_constraint(prob, toy_vars, package_vars, max_capacity)
+
+    prob.solve(GLPK(msg=0))
+    print(int(value(prob.objective)))
+
+solve_optimization_problem()
